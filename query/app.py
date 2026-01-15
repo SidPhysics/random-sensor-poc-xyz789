@@ -83,7 +83,13 @@ def query_metrics(
     sensor_filter = parse_sensors(params.sensors)
 
     # Parse metrics
-    metric_types: List[str] = [m.strip() for m in params.metrics.split(",")]
+    metric_types = [m.strip() for m in params.metrics.split(",") if m.strip()]
+
+    if not metric_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one metric must be specified",
+        )
 
     # Build base query
     query = (
