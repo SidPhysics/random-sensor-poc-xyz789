@@ -21,20 +21,24 @@ query_client = TestClient(query_app)
 def seed_data():
     # clear existing data
     db = next(get_db())
-    db.query(Metric).delete()
-    db.commit()
+    try:
 
-    payloads = [
-        {"sensor_id": 1, "metric_type": "temperature", "value": 20},
-        {"sensor_id": 1, "metric_type": "temperature", "value": 24},
-        {"sensor_id": 1, "metric_type": "humidity", "value": 50},
-        {"sensor_id": 2, "metric_type": "temperature", "value": 30},
-    ]
+        db.query(Metric).delete()
+        db.commit()
 
-    for payload in payloads:
-        response = ingest_client.post("/metrics", json=payload)
-        assert response.status_code == 201
+        payloads = [
+            {"sensor_id": 1, "metric_type": "temperature", "value": 20},
+            {"sensor_id": 1, "metric_type": "temperature", "value": 24},
+            {"sensor_id": 1, "metric_type": "humidity", "value": 50},
+            {"sensor_id": 2, "metric_type": "temperature", "value": 30},
+        ]
 
+        for payload in payloads:
+            response = ingest_client.post("/metrics", json=payload)
+            assert response.status_code == 201
+
+    finally:
+        db.close()
 # ------------------------
 # Valid Query Tests
 # ------------------------
