@@ -34,7 +34,7 @@ class QueryParams(BaseModel):
         ..., description="Comma-separated metrics like 'temperature,humidity'"
     )
     statistic: str = Field(
-        ..., regex="^(min|max|sum|avg)$", description="Aggregation type"
+        ..., pattern="^(min|max|sum|avg)$", description="Aggregation type"
     )
     start_date: Optional[str] = Field(
         None, description="YYYY-MM-DD (optional)"
