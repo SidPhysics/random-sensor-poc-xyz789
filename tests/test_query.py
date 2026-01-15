@@ -137,6 +137,43 @@ def test_query_no_matching_data_returns_empty_results():
     assert response.status_code == 200
     assert response.json()["results"] == {}
 
+def test_query_applies_date_filter_correctly(seed_data):
+    """
+    Ensure metrics outside the requested date range
+    do not affect aggregation results.
+    """
+    test_date = seed_data
+
+    # Insert OUT-OF-RANGE data (day before)
+    out_of_range_payload = {
+        "sensor_id": 1,
+        "metric_type": "temperature",
+        "value": 100,  # would skew avg if included
+        "timestamp": (test_date - timedelta(days=1)).isoformat(),
+    }
+
+    response = ingest_client.post("/metrics", json=out_of_range_payload)
+    assert response.status_code == 201
+
+    # Query ONLY the intended date range
+    response = query_client.get(
+        "/query",
+        params={
+            "sensors": "1",
+            "metrics": "temperature",
+            "statistic": "avg",
+            "start_date": test_date.strftime("%Y-%m-%d"),
+            "end_date": (test_date + timedelta(days=1)).strftime("%Y-%m-%d"),
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+
+    # Avg should still be (20 + 24) / 2 = 22.0
+    assert body["results"]["1"]["temperature"] == 22.0
+
+
 
 # ------------------------
 # Invalid Input Tests
