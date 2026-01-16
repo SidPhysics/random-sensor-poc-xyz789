@@ -9,3 +9,15 @@ venv/
 *.log
 .DS_Store
 Thumbs.db
+
+# CDK
+lambda_layer/
+cdk.out/
+cdk.context.json
+
+# AWS credentials
+github-*.json
+
+# Lambda build artifacts
+ingest/shared/
+query/shared/
