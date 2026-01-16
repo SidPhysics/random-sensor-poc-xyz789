@@ -1,5 +1,4 @@
 from mangum import Mangum
-from ingest.app import app
+from app import app
 
-# AWS Lambda entry point
-handler = Mangum(app)
+lambda_handler = Mangum(app)
