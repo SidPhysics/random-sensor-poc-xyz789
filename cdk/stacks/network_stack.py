@@ -5,7 +5,7 @@ class NetworkStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # VPC without NAT Gateway (free tier compliant)
+        # VPC with public subnets only (no NAT Gateway, no VPC Endpoints)
         self.vpc = ec2.Vpc(
             self,
             "WeatherSensorVPC",

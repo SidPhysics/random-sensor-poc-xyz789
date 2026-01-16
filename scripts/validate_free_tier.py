@@ -18,7 +18,7 @@ def validate_free_tier(template_path):
         if resource.get("Type") == "AWS::EC2::NatGateway":
             violations.append(f"❌ Gate 1 FAILED: NAT Gateway found ({name})")
     
-    # Gate 2: No VPC Endpoints
+    # Gate 2: No VPC Endpoints (not needed with public subnets)
     for name, resource in resources.items():
         if resource.get("Type") == "AWS::EC2::VPCEndpoint":
             violations.append(f"❌ Gate 2 FAILED: VPC Endpoint found ({name})")

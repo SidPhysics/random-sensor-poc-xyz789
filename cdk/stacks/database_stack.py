@@ -31,7 +31,7 @@ class DatabaseStack(Stack):
         )
 
         # RDS PostgreSQL (free tier: db.t3.micro, 20GB storage, single-AZ)
-        # POC: publicly_accessible=True with security group restrictions (Lambda not in VPC)
+        # Public subnet, not publicly accessible (Lambda in same VPC)
         self.db_instance = rds.DatabaseInstance(
             self,
             "WeatherSensorDB",
@@ -43,7 +43,7 @@ class DatabaseStack(Stack):
             allocated_storage=20,
             max_allocated_storage=20,
             multi_az=False,
-            publicly_accessible=True,  # Required for Lambda outside VPC
+            publicly_accessible=False,  # Private - Lambda in same VPC
             database_name="weathersensor",
             removal_policy=RemovalPolicy.DESTROY,
             deletion_protection=False,
