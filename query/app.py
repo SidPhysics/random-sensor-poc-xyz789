@@ -11,6 +11,14 @@ from shared.database import get_db
 from shared.models import Metric
 from shared.schemas import QueryParams
 
+from shared.database import Base, engine
+
+from datetime import datetime, timedelta
+
+# Create tables (checkfirst=True prevents error if table exists)
+Base.metadata.create_all(bind=engine, checkfirst=True)
+
+
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
@@ -50,7 +58,7 @@ def parse_date_range(start_date: str, end_date: str):
     """
     try:
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -111,7 +119,7 @@ def query_metrics(
         )
         query = query.filter(
             Metric.timestamp >= start_dt,
-            Metric.timestamp <= end_dt,
+            Metric.timestamp < end_dt,
         )
 
     try:

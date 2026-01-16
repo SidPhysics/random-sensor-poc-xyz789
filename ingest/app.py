@@ -15,8 +15,8 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+# Create tables (checkfirst=True prevents error if table exists)
+Base.metadata.create_all(bind=engine, checkfirst=True)
 
 
 @app.post("/metrics", status_code=status.HTTP_201_CREATED)
