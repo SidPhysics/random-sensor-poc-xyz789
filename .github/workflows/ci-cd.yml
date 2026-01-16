@@ -174,3 +174,15 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
           cdk deploy --all --require-approval never
+      
+      - name: Get API Endpoint
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        id: get-endpoint
+        run: |
+          API_URL=$(aws cloudformation describe-stacks --stack-name weather-sensor-poc-api --region us-east-1 --query "Stacks[0].Outputs[?contains(OutputKey,'Endpoint')].OutputValue" --output text)
+          echo "API_BASE_URL=$API_URL" >> $GITHUB_ENV
+      
+      - name: Run Integration Tests
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          pytest tests/integration/ -v
