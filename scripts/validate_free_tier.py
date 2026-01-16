@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import json
 import sys
 from pathlib import Path
@@ -84,7 +85,7 @@ def main():
     
     # Check all CloudFormation templates
     for template_file in cdk_out.glob("*.template.json"):
-        print(f"\nÌ¥ç Validating {template_file.name}...")
+        print(f"\nÔøΩÔøΩÔøΩ Validating {template_file.name}...")
         violations = validate_free_tier(template_file)
         
         if violations:
