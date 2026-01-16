@@ -5,15 +5,6 @@ class DatabaseStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, vpc: ec2.Vpc, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # Lambda security group (created here to avoid circular dependency)
-        self.lambda_sg = ec2.SecurityGroup(
-            self,
-            "LambdaSecurityGroup",
-            vpc=vpc,
-            description="Security group for Lambda functions",
-            allow_all_outbound=True,
-        )
-
         # Security group for RDS
         self.db_security_group = ec2.SecurityGroup(
             self,
@@ -23,11 +14,12 @@ class DatabaseStack(Stack):
             allow_all_outbound=True,
         )
 
-        # Allow Lambda to connect to RDS
+        # Allow connections from anywhere on port 5432 (Lambda outside VPC)
+        # Security: RDS credentials in Secrets Manager, publicly_accessible but password-protected
         self.db_security_group.add_ingress_rule(
-            peer=self.lambda_sg,
+            peer=ec2.Peer.any_ipv4(),
             connection=ec2.Port.tcp(5432),
-            description="Allow Lambda to connect to RDS",
+            description="Allow PostgreSQL connections (Lambda outside VPC)",
         )
 
         # RDS PostgreSQL (free tier: db.t3.micro, 20GB storage, single-AZ)
