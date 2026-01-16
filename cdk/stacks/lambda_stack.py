@@ -19,7 +19,7 @@ class LambdaStack(Stack):
             "DB_SECRET_ARN": db_secret.secret_arn,
         }
 
-        # Ingest Lambda function (in VPC public subnet)
+        # Ingest Lambda function (outside VPC for free tier)
         self.ingest_function = _lambda.Function(
             self,
             "IngestFunction",
@@ -30,13 +30,9 @@ class LambdaStack(Stack):
             environment=lambda_env,
             timeout=Duration.seconds(30),
             memory_size=128,
-            vpc=vpc,
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-            security_groups=[lambda_sg],
-            allow_public_subnet=True,  # Lambda in public subnet can access internet via IGW
         )
 
-        # Query Lambda function (in VPC public subnet)
+        # Query Lambda function (outside VPC for free tier)
         self.query_function = _lambda.Function(
             self,
             "QueryFunction",
@@ -47,10 +43,6 @@ class LambdaStack(Stack):
             environment=lambda_env,
             timeout=Duration.seconds(30),
             memory_size=128,
-            vpc=vpc,
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-            security_groups=[lambda_sg],
-            allow_public_subnet=True,  # Lambda in public subnet can access internet via IGW
         )
 
         # Grant secret read permissions (least privilege)
