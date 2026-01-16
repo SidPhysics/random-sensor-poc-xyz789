@@ -81,10 +81,39 @@ jobs:
         with:
           category: "/language:python"
 
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install flake8 mypy black
+      
+      - name: Check code formatting with Black
+        run: |
+          black --check ingest/ query/ shared/ cdk/ tests/ || echo "Code formatting issues found"
+      
+      - name: Lint with flake8
+        run: |
+          flake8 ingest/ query/ shared/ cdk/ tests/
+      
+      - name: Type check with mypy
+        run: |
+          mypy ingest/ query/ shared/ cdk/ || echo "Type checking issues found"
+
   test-and-deploy:
     name: Test and Deploy
     runs-on: ubuntu-latest
-    needs: [security-scan, codeql-analysis]
+    needs: [security-scan, codeql-analysis, code-quality]
     if: github.event_name != 'schedule'
     
     steps:

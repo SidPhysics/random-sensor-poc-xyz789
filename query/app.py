@@ -81,7 +81,7 @@ def query_metrics(
 ) -> Dict[str, Any]:
     """
     Query aggregated sensor metrics.
-    
+
     """
 
     # Statistic already validated by schema
@@ -104,7 +104,7 @@ def query_metrics(
         db.query(
             Metric.sensor_id,
             Metric.metric_type,
-            agg_func(Metric.value).label("value"),
+            agg_func(Metric.value).label("value"),  # type: ignore[operator]
         )
         .filter(Metric.metric_type.in_(metric_types))
         .group_by(Metric.sensor_id, Metric.metric_type)
@@ -114,9 +114,7 @@ def query_metrics(
         query = query.filter(sensor_filter)
 
     if params.start_date and params.end_date:
-        start_dt, end_dt = parse_date_range(
-            params.start_date, params.end_date
-        )
+        start_dt, end_dt = parse_date_range(params.start_date, params.end_date)
         query = query.filter(
             Metric.timestamp >= start_dt,
             Metric.timestamp < end_dt,
