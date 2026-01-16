@@ -1,8 +1,16 @@
 from aws_cdk import Stack, aws_apigateway as apigw, aws_lambda as _lambda
 from constructs import Construct
 
+
 class ApiStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, ingest_function: _lambda.Function, query_function: _lambda.Function, **kwargs) -> None:
+    def __init__(
+        self,
+        scope: Construct,
+        construct_id: str,
+        ingest_function: _lambda.Function,
+        query_function: _lambda.Function,
+        **kwargs,
+    ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         # REST API Gateway

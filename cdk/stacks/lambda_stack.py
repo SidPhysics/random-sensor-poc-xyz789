@@ -1,5 +1,6 @@
-from aws_cdk import Stack, Duration, aws_lambda as _lambda, aws_ec2 as ec2
+from aws_cdk import Stack, Duration, aws_lambda as _lambda
 from constructs import Construct
+
 
 class LambdaStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, db_secret, **kwargs) -> None:

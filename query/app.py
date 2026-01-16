@@ -1,8 +1,8 @@
 import logging
-from typing import Dict, Any, List
-from datetime import datetime
+from typing import Dict, Any
+from datetime import datetime, timedelta
 
-from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -12,8 +12,6 @@ from shared.models import Metric
 from shared.schemas import QueryParams
 
 from shared.database import Base, engine
-
-from datetime import datetime, timedelta
 
 # Create tables (checkfirst=True prevents error if table exists)
 Base.metadata.create_all(bind=engine, checkfirst=True)

@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, String, Float, DateTime
 from .database import Base  # ← Yeh shared/database.py se import ho raha hai
 from datetime import datetime
 
+
 class Metric(Base):
     __tablename__ = "metrics"
 

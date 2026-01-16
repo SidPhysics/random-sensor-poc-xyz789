@@ -30,7 +30,7 @@ def get_database_url():
             response = client.get_secret_value(SecretId=db_secret_arn)
             secret = json.loads(response["SecretString"])
 
-            _database_url_cache = f"postgresql://{secret['username']}:{secret['password']}@{secret['host']}:{secret.get('port', 5432)}/{secret['dbname']}"
+            _database_url_cache = f"postgresql://{secret['username']}:{secret['password']}@{secret['host']}:{secret.get('port', 5432)}/{secret['dbname']}"  # noqa: E501
             return _database_url_cache
         except Exception as e:
             print(f"Error fetching secret: {e}")

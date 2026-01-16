@@ -13,12 +13,13 @@ query_client = TestClient(query_app)
 # Test Setup: Seed Data with Specific Timestamps
 # ------------------------
 
+
 @pytest.fixture(scope="function")
 def seed_data():
     """Seed test data with known timestamps for isolation."""
     # Use a specific date for this test run (midnight for clean date filtering)
     test_date = datetime(2024, 1, 15, 0, 0, 0)
-    
+
     payloads = [
         {
             "sensor_id": 1,
@@ -49,13 +50,14 @@ def seed_data():
     for payload in payloads:
         response = ingest_client.post("/metrics", json=payload)
         assert response.status_code == 201
-    
+
     return test_date
 
 
 # ------------------------
 # Valid Query Tests
 # ------------------------
+
 
 def test_query_avg_temperature_single_sensor(seed_data):
     test_date = seed_data
@@ -121,6 +123,7 @@ def test_query_all_sensors_max_temperature(seed_data):
 # Empty Result Test
 # ------------------------
 
+
 def test_query_no_matching_data_returns_empty_results():
     # Query a date with no data
     response = query_client.get(
@@ -136,6 +139,7 @@ def test_query_no_matching_data_returns_empty_results():
 
     assert response.status_code == 200
     assert response.json()["results"] == {}
+
 
 def test_query_applies_date_filter_correctly(seed_data):
     """
@@ -174,10 +178,10 @@ def test_query_applies_date_filter_correctly(seed_data):
     assert body["results"]["1"]["temperature"] == 22.0
 
 
-
 # ------------------------
 # Invalid Input Tests
 # ------------------------
+
 
 @pytest.mark.parametrize(
     "params",
