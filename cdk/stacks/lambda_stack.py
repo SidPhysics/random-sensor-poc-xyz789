@@ -2,7 +2,7 @@ from aws_cdk import Stack, Duration, aws_lambda as _lambda, aws_ec2 as ec2
 from constructs import Construct
 
 class LambdaStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, vpc: ec2.Vpc, lambda_sg: ec2.SecurityGroup, db_secret, **kwargs) -> None:
+    def __init__(self, scope: Construct, construct_id: str, db_secret, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         # Shared Lambda layer for dependencies

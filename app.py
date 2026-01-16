@@ -28,8 +28,6 @@ database_stack = DatabaseStack(
 lambda_stack = LambdaStack(
     app,
     f"{project_name}-lambda",
-    vpc=network_stack.vpc,
-    lambda_sg=database_stack.lambda_sg,
     db_secret=database_stack.db_secret,
     env=env,
 )
