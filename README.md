@@ -189,7 +189,6 @@ Ingest a new sensor metric reading.
 - `humidity` (%)
 - `wind_speed` (m/s)
 - `pressure` (hPa)
-- Custom metric types supported
 
 ### Query Metrics
 
