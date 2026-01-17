@@ -24,7 +24,7 @@ def get_database_url():
     if db_secret_arn:
         # Import boto3 only when needed (AWS Lambda environment)
         import boto3
-        
+
         # Fetch credentials from Secrets Manager (only once per container)
         client = boto3.client("secretsmanager")
 

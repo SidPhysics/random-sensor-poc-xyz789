@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List, Tuple
 from datetime import datetime, timedelta
 
 from fastapi import FastAPI, Depends, HTTPException, status
@@ -50,7 +50,7 @@ def parse_sensors(sensors_param: str):
         )
 
 
-def parse_date_range(start_date: str, end_date: str):
+def parse_date_range(start_date: str, end_date: str) -> Tuple[datetime, datetime]:
     """
     Parse date strings into datetime objects.
     """
@@ -96,25 +96,31 @@ def query_metrics(
 
     # Check if querying latest data (no date range specified)
     is_latest_query = not (params.start_date and params.end_date)
-    
+
     if is_latest_query:
         # Get latest record for each sensor/metric combination
-        results = []
-        for sensor_id in ([int(s.strip()) for s in params.sensors.split(",")] if params.sensors != "all" else 
-                         [r[0] for r in db.query(Metric.sensor_id).distinct().all()]):
+        results: List[Tuple[int, str, float, datetime]] = []
+        for sensor_id in (
+            [int(s.strip()) for s in params.sensors.split(",")]
+            if params.sensors != "all"
+            else [r[0] for r in db.query(Metric.sensor_id).distinct().all()]
+        ):
             for metric_type in metric_types:
                 latest_record = (
                     db.query(Metric)
-                    .filter(
-                        Metric.sensor_id == sensor_id,
-                        Metric.metric_type == metric_type
-                    )
+                    .filter(Metric.sensor_id == sensor_id, Metric.metric_type == metric_type)
                     .order_by(desc(Metric.timestamp))
                     .first()
                 )
                 if latest_record:
-                    results.append((latest_record.sensor_id, latest_record.metric_type, 
-                                  latest_record.value, latest_record.timestamp))
+                    results.append(
+                        (
+                            int(latest_record.sensor_id),
+                            str(latest_record.metric_type),
+                            float(latest_record.value),
+                            latest_record.timestamp,  # type: ignore[arg-type]
+                        )
+                    )
     else:
         # Aggregated query for date range
         if not params.statistic:
@@ -122,10 +128,11 @@ def query_metrics(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="statistic is required for date range queries",
             )
-            
+
         agg_func = STAT_FUNC_MAP[params.statistic]
-        start_dt, end_dt = parse_date_range(params.start_date, params.end_date)
-        
+        # Type assertion since we know both are not None in this branch
+        start_dt, end_dt = parse_date_range(params.start_date, params.end_date)  # type: ignore
+
         query = (
             db.query(
                 Metric.sensor_id,
@@ -139,7 +146,7 @@ def query_metrics(
             )
             .group_by(Metric.sensor_id, Metric.metric_type)
         )
-        
+
         if sensor_filter is not None:
             query = query.filter(sensor_filter)
 
@@ -148,7 +155,7 @@ def query_metrics(
             # Results already collected in the if block above
             pass
         else:
-            results = query.all()
+            results = query.all()  # type: ignore
     except SQLAlchemyError as e:
         logger.error(
             f"Database error during query: {type(e).__name__}: {str(e)}",
@@ -161,10 +168,10 @@ def query_metrics(
 
     # Format response
     response: Dict[str, Dict[str, Any]] = {}
-    
+
     if is_latest_query:
         # Group by sensor for response, but handle timestamps per metric
-        sensor_timestamps = {}
+        sensor_timestamps: Dict[str, datetime] = {}
         for sensor_id, metric_type, value, timestamp in results:
             sensor_key = str(sensor_id)
             if sensor_key not in response:
@@ -174,12 +181,13 @@ def query_metrics(
             # Use the latest timestamp across all metrics for this sensor
             if timestamp > sensor_timestamps[sensor_key]:
                 sensor_timestamps[sensor_key] = timestamp
-        
+
         # Add timestamps to response
         for sensor_key in response:
             response[sensor_key]["ingested_at"] = sensor_timestamps[sensor_key].isoformat()
     else:
-        for sensor_id, metric_type, value in results:
+        for row in results:
+            sensor_id, metric_type, value = row[:3]  # Take only first 3 elements
             response.setdefault(str(sensor_id), {})[metric_type] = value
 
     return {
