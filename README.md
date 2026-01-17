@@ -17,15 +17,19 @@ curl -X POST "https://dsiuqwaqe3.execute-api.us-east-1.amazonaws.com/prod/metric
     "timestamp": "2024-01-15T10:00:00"
   }'
 
-# Query average temperature
+# Query average temperature for date range
 curl "https://dsiuqwaqe3.execute-api.us-east-1.amazonaws.com/prod/query?sensors=1&metrics=temperature&statistic=avg&start_date=2024-01-15&end_date=2024-01-16"
+
+# Query latest temperature reading (no date range)
+curl "https://dsiuqwaqe3.execute-api.us-east-1.amazonaws.com/prod/query?sensors=1&metrics=temperature"
 ```
 
 ## 📋 Features
 
 - **RESTful API** with FastAPI framework
 - **Real-time ingestion** of sensor metrics (temperature, humidity, wind speed, etc.)
-- **Statistical aggregation** (min, max, average, sum) with flexible querying
+- **Statistical aggregation** (min, max, average, sum) with flexible date-range querying
+- **Latest data queries** with ingestion timestamps when no date range specified
 - **Multi-sensor support** with time-based filtering
 - **Production-grade security** with input validation and rate limiting
 - **Serverless architecture** using AWS Lambda for automatic scaling
@@ -121,8 +125,11 @@ curl "https://dsiuqwaqe3.execute-api.us-east-1.amazonaws.com/prod/query?sensors=
        "timestamp": "2024-01-15T10:00:00"
      }'
 
-   # Query endpoint (port 8001)
+   # Query endpoint with date range (port 8001)
    curl "http://localhost:8001/query?sensors=1&metrics=temperature&statistic=avg&start_date=2024-01-15&end_date=2024-01-16"
+   
+   # Query latest data (port 8001)
+   curl "http://localhost:8001/query?sensors=1&metrics=temperature"
    ```
 
 ### Project Structure
@@ -199,16 +206,43 @@ Query aggregated sensor metrics with flexible filtering.
 **Query Parameters:**
 - `sensors` - Sensor IDs (comma-separated) or "all"
 - `metrics` - Metric types (comma-separated)
-- `statistic` - Aggregation function: `min`, `max`, `avg`, `sum`
-- `start_date` - Start date (YYYY-MM-DD)
-- `end_date` - End date (YYYY-MM-DD)
+- `statistic` - Aggregation function: `min`, `max`, `avg`, `sum` (required for date ranges)
+- `start_date` - Start date (YYYY-MM-DD, optional)
+- `end_date` - End date (YYYY-MM-DD, optional)
+
+**Query Types:**
+
+1. **Latest Data Query** (no date range):
+   ```
+   GET /query?sensors=1&metrics=temperature
+   ```
+   Returns the most recent value with ingestion timestamp.
+
+2. **Aggregated Query** (with date range):
+   ```
+   GET /query?sensors=1&metrics=temperature&statistic=avg&start_date=2024-01-15&end_date=2024-01-16
+   ```
+   Returns statistical aggregation over the specified period.
 
 **Example:**
 ```
 GET /query?sensors=1,2&metrics=temperature,humidity&statistic=avg&start_date=2024-01-15&end_date=2024-01-16
 ```
 
-**Response:**
+**Latest Data Response:**
+```json
+{
+  "statistic": "latest",
+  "results": {
+    "1": {
+      "temperature": 22.5,
+      "ingested_at": "2024-01-15T10:00:00"
+    }
+  }
+}
+```
+
+**Aggregated Data Response:**
 ```json
 {
   "statistic": "avg",
@@ -252,9 +286,9 @@ The project includes a comprehensive GitHub Actions pipeline:
    - Linting (Flake8)
    - Type checking (MyPy)
 
-3. **Testing**
-   - Unit tests (pytest)
-   - Integration tests against live API
+3. **Testing & Deployment**
+   - Unit tests (pytest) - Run before deployment
+   - Integration tests against live API - Run after deployment
    - Free tier compliance validation
 
 4. **Deployment**
