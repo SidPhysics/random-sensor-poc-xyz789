@@ -27,6 +27,19 @@ class MetricCreate(BaseModel):
 class QueryParams(BaseModel):
     sensors: str = Field("all", description="'all' or comma-separated IDs like '1,2,3'")
     metrics: str = Field(..., description="Comma-separated metrics like 'temperature,humidity'")
-    statistic: str = Field(..., pattern="^(min|max|sum|avg)$", description="Aggregation type")
+    statistic: Optional[str] = Field(None, pattern="^(min|max|sum|avg)$", description="Aggregation type (required for date range queries)")
     start_date: Optional[str] = Field(None, description="YYYY-MM-DD (optional)")
     end_date: Optional[str] = Field(None, description="YYYY-MM-DD (optional)")
+    
+    @field_validator("statistic")
+    @classmethod
+    def validate_statistic_for_date_range(cls, v, info):
+        # Get other field values from validation context
+        start_date = info.data.get('start_date')
+        end_date = info.data.get('end_date')
+        
+        # If date range is provided, statistic is required
+        if (start_date or end_date) and not v:
+            raise ValueError("statistic is required when start_date or end_date is provided")
+            
+        return v
