@@ -3,7 +3,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 import os
 import json
-import boto3
 
 # Cache for database URL (fetched once per Lambda container)
 _database_url_cache = None
@@ -23,6 +22,9 @@ def get_database_url():
     db_secret_arn = os.getenv("DB_SECRET_ARN")
 
     if db_secret_arn:
+        # Import boto3 only when needed (AWS Lambda environment)
+        import boto3
+        
         # Fetch credentials from Secrets Manager (only once per container)
         client = boto3.client("secretsmanager")
 
