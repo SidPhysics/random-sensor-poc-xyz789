@@ -84,7 +84,7 @@ curl "https://dsiuqwaqe3.execute-api.us-east-1.amazonaws.com/prod/query?sensors=
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/SidPhysics/random-sensor-poc-xyz789
    cd random-sensor-poc-xyz789
    ```
 
@@ -96,9 +96,18 @@ curl "https://dsiuqwaqe3.execute-api.us-east-1.amazonaws.com/prod/query?sensors=
    ```
 
 3. **Run with Docker Compose**
+   
+   **⚠️ Important:** Ensure Docker Desktop is running before proceeding.
+   
    ```bash
+   # Start Docker Desktop first, then run:
    docker-compose up --build
    ```
+   
+   **Troubleshooting:**
+   - If you get "cannot connect to Docker daemon" error, start Docker Desktop
+   - On Windows, Docker Desktop must be fully started (whale icon in system tray)
+   - Alternative: Use the live API endpoints instead of local setup
 
 4. **Test the APIs**
    ```bash
