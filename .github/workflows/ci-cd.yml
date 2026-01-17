@@ -146,9 +146,9 @@ jobs:
           cp -r shared ingest/
           cp -r shared query/
       
-      - name: Run tests
+      - name: Run Unit Tests
         run: |
-          pytest tests/ -v
+          pytest tests/test_*.py -v
       
       - name: Synthesize CDK
         run: |
