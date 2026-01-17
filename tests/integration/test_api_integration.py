@@ -51,8 +51,26 @@ class TestIngestIntegration:
 class TestQueryIntegration:
     """Test the query endpoint against live API."""
 
-    def test_query_existing_data_success(self, api_base_url):
-        """Test querying existing data."""
+    def test_query_latest_data_success(self, api_base_url):
+        """Test querying latest data without date range."""
+        params = {
+            "sensors": "1",
+            "metrics": "temperature",
+        }
+
+        response = requests.get(f"{api_base_url}/query", params=params, timeout=30)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["statistic"] == "latest"
+        assert "results" in data
+        # Check for timestamp in latest data
+        if data["results"]:
+            sensor_data = list(data["results"].values())[0]
+            assert "ingested_at" in sensor_data
+
+    def test_query_aggregated_data_success(self, api_base_url):
+        """Test querying aggregated data with date range."""
         params = {
             "sensors": "1",
             "metrics": "temperature",
@@ -67,6 +85,10 @@ class TestQueryIntegration:
         data = response.json()
         assert data["statistic"] == "avg"
         assert "results" in data
+        # No timestamp in aggregated data
+        if data["results"]:
+            sensor_data = list(data["results"].values())[0]
+            assert "ingested_at" not in sensor_data
 
     def test_query_invalid_statistic_returns_422(self, api_base_url):
         """Test invalid statistic parameter."""
@@ -86,8 +108,36 @@ class TestQueryIntegration:
 class TestEndToEndFlow:
     """Test complete ingest → query flow."""
 
-    def test_ingest_then_query_flow(self, api_base_url):
-        """Test ingesting data then querying it back."""
+    def test_ingest_then_query_latest_flow(self, api_base_url):
+        """Test ingesting data then querying latest."""
+        # Step 1: Ingest test data
+        payload = {
+            "sensor_id": 777,
+            "metric_type": "temperature",
+            "value": 25.5,
+            "timestamp": "2099-05-01T10:00:00",
+        }
+
+        response = requests.post(f"{api_base_url}/metrics", json=payload, timeout=30)
+        assert response.status_code == 201
+
+        # Step 2: Query latest data
+        params = {
+            "sensors": "777",
+            "metrics": "temperature",
+        }
+
+        response = requests.get(f"{api_base_url}/query", params=params, timeout=30)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["statistic"] == "latest"
+        assert "777" in data["results"]
+        assert data["results"]["777"]["temperature"] == 25.5
+        assert "ingested_at" in data["results"]["777"]
+
+    def test_ingest_then_query_aggregated_flow(self, api_base_url):
+        """Test ingesting data then querying aggregated results."""
         # Step 1: Ingest test data
         test_data = [
             {
@@ -108,7 +158,7 @@ class TestEndToEndFlow:
             response = requests.post(f"{api_base_url}/metrics", json=payload, timeout=30)
             assert response.status_code == 201
 
-        # Step 2: Query the data back
+        # Step 2: Query the aggregated data
         params = {
             "sensors": "888",
             "metrics": "temperature",
@@ -121,5 +171,7 @@ class TestEndToEndFlow:
 
         assert response.status_code == 200
         data = response.json()
+        assert data["statistic"] == "avg"
         assert "888" in data["results"]
         assert data["results"]["888"]["temperature"] == 25.0  # Average of 20.0 and 30.0
+        assert "ingested_at" not in data["results"]["888"]  # No timestamp for aggregated
