@@ -129,6 +129,42 @@ def test_query_latest_all_sensors(unique_sensor_id):
     assert str(unique_sensor_id) in body["results"]
     assert body["results"][str(unique_sensor_id)]["temperature"] == 25
     assert "ingested_at" in body["results"][str(unique_sensor_id)]
+    assert body["warning"] is None  # No warning when no statistic provided
+
+
+def test_query_latest_with_ignored_statistic(unique_sensor_id):
+    """Test latest data query shows warning when statistic is provided but ignored."""
+    # Create data for this specific test
+    test_date = datetime(2024, 1, 15, 0, 0, 0)
+    payloads = [
+        {
+            "sensor_id": unique_sensor_id,
+            "metric_type": "temperature",
+            "value": 25,
+            "timestamp": test_date.isoformat(),
+        },
+    ]
+
+    for payload in payloads:
+        response = ingest_client.post("/metrics", json=payload)
+        assert response.status_code == 201
+
+    response = query_client.get(
+        "/query",
+        params={
+            "sensors": str(unique_sensor_id),
+            "metrics": "temperature",
+            "statistic": "avg",  # This should be ignored and warned about
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+
+    assert body["statistic"] == "latest"
+    assert body["warning"] == "Parameter 'avg' ignored for latest data queries (no date range provided)"
+    assert body["results"][str(unique_sensor_id)]["temperature"] == 25
+    assert "ingested_at" in body["results"][str(unique_sensor_id)]
 
 
 # ------------------------
