@@ -192,6 +192,11 @@ def query_metrics(
 
     return {
         "statistic": params.statistic if not is_latest_query else "latest",
-        "warning": f"Parameter '{params.statistic}' ignored for latest data queries (no date range provided)" if is_latest_query and params.statistic else None,
+        "warning": (
+            f"Parameter '{params.statistic}' ignored for latest data queries "
+            f"(no date range provided)"
+            if is_latest_query and params.statistic
+            else None
+        ),
         "results": response,
     }

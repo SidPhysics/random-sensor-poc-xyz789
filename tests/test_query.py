@@ -133,7 +133,7 @@ def test_query_latest_all_sensors(unique_sensor_id):
 
 
 def test_query_latest_with_ignored_statistic(unique_sensor_id):
-    """Test latest data query shows warning when statistic is provided but ignored."""
+    """Test latest query shows warning when statistic is provided but ignored."""
     # Create data for this specific test
     test_date = datetime(2024, 1, 15, 0, 0, 0)
     payloads = [
@@ -162,7 +162,9 @@ def test_query_latest_with_ignored_statistic(unique_sensor_id):
     body = response.json()
 
     assert body["statistic"] == "latest"
-    assert body["warning"] == "Parameter 'avg' ignored for latest data queries (no date range provided)"
+    assert body["warning"] == (
+        "Parameter 'avg' ignored for latest data queries (no date range provided)"
+    )
     assert body["results"][str(unique_sensor_id)]["temperature"] == 25
     assert "ingested_at" in body["results"][str(unique_sensor_id)]
 
