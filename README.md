@@ -345,24 +345,243 @@ mypy .
 - Error handling and rate limiting validation
 - Data consistency verification
 
-## 🔒 Security
+## 🔒 Security & IAM
 
-### Security Measures
+### AWS IAM Architecture
 
-- **Input Validation** - Pydantic schemas prevent injection attacks
-- **Rate Limiting** - API Gateway throttling (100 requests per client)
-- **Network Security** - VPC with security groups restricting database access
-- **Credential Management** - AWS Secrets Manager for database passwords
-- **Least Privilege IAM** - Lambda functions have minimal required permissions
-- **HTTPS Only** - All API communication encrypted in transit
+The project implements a **least-privilege security model** with role-based access control across all AWS services.
 
-### Security Scanning
+#### Lambda Function Permissions
 
-Automated security scanning in CI/CD pipeline:
-- **SAST** (Static Application Security Testing) with Bandit
-- **Dependency Scanning** with Safety for known CVEs
-- **Secret Detection** with TruffleHog
-- **Code Quality** analysis with CodeQL
+**Ingest & Query Lambda Functions:**
+- **Secrets Manager**: `secretsmanager:GetSecretValue` - Read database credentials only
+- **CloudWatch Logs**: Automatic logging permissions via CDK
+- **No VPC permissions** - Functions run outside VPC for cost optimization
+
+```python
+# CDK automatically creates minimal IAM roles
+db_secret.grant_read(self.ingest_function)  # Only read access to DB secret
+db_secret.grant_read(self.query_function)   # Only read access to DB secret
+```
+
+#### Database Security
+
+**RDS PostgreSQL Security:**
+- **Network**: Security group allows connections only on port 5432
+- **Authentication**: Strong auto-generated passwords stored in Secrets Manager
+- **Encryption**: Data encrypted at rest and in transit
+- **Public Access**: Required for Lambda outside VPC, but password-protected
+
+```python
+# Security group configuration
+self.db_security_group.add_ingress_rule(
+    peer=ec2.Peer.any_ipv4(),  # Public access required for Lambda outside VPC
+    connection=ec2.Port.tcp(5432),  # PostgreSQL port only
+    description="Allow PostgreSQL connections (Lambda outside VPC)"
+)
+```
+
+#### API Gateway Security
+
+**Rate Limiting & Throttling:**
+- **Global Limit**: 1,000 requests/second with 2,000 burst
+- **Per-Client Limit**: 100 requests/second with 50 burst
+- **Monthly Quota**: 10,000 requests per API key
+- **No Authentication Required**: Public API for demo purposes
+
+```python
+# Usage plan configuration
+usage_plan = api.add_usage_plan(
+    throttle=apigw.ThrottleSettings(
+        rate_limit=100,   # Per client
+        burst_limit=50,   # Per client
+    ),
+    quota=apigw.QuotaSettings(
+        limit=10000,      # Per month per client
+        period=apigw.Period.MONTH,
+    ),
+)
+```
+
+### GitHub Actions CI/CD Security
+
+#### OpenID Connect (OIDC) Authentication
+
+The project uses **OIDC Web Identity Federation** instead of long-lived AWS access keys for enhanced security.
+
+**Setup Process:**
+1. **OIDC Provider**: Created in AWS IAM for `token.actions.githubusercontent.com`
+2. **IAM Role**: `GitHubActionsCDKDeployRole` with deployment permissions
+3. **Trust Policy**: Restricts access to specific repository and branch
+4. **GitHub Secret**: `AWS_ROLE_ARN` contains the role ARN for assumption
+
+**Trust Policy (Repository-Specific):**
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {
+      "Federated": "arn:aws:iam::ACCOUNT:oidc-provider/token.actions.githubusercontent.com"
+    },
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": {
+        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+      },
+      "StringLike": {
+        "token.actions.githubusercontent.com:sub": "repo:SidPhysics/random-sensor-poc-xyz789:ref:refs/heads/main"
+      }
+    }
+  }]
+}
+```
+
+#### Deployment Role Permissions
+
+The `GitHubActionsCDKDeployRole` follows **least-privilege principles** with resource-specific permissions:
+
+**CloudFormation**: Stack management for `weather-sensor-poc-*` and `CDKToolkit` only
+**S3**: CDK asset storage in account-specific buckets only
+**IAM**: Role management for Lambda functions with `weather-sensor-poc-*` prefix only
+**Lambda**: Function and layer management with project prefix only
+**EC2**: VPC and networking resources (no instance permissions)
+**RDS**: Database management with project prefix only
+**Secrets Manager**: Secret management with project prefix only
+**API Gateway**: REST API management in us-east-1 region only
+**SSM**: CDK bootstrap parameters only
+
+**Security Boundaries:**
+- **Resource Prefixes**: All permissions scoped to `weather-sensor-poc-*` resources
+- **Region Restriction**: Limited to `us-east-1` region
+- **Account Boundary**: All ARNs include specific AWS account ID
+- **Branch Restriction**: Only `main` branch can trigger deployments
+
+#### Secrets Management
+
+**Database Credentials:**
+- **Auto-Generated**: RDS creates strong random passwords
+- **Secrets Manager**: Credentials stored encrypted at rest
+- **Rotation**: Automatic rotation capability (not enabled for cost)
+- **Access**: Lambda functions have read-only access via IAM
+
+**GitHub Repository Secrets:**
+- `AWS_ROLE_ARN`: Contains the deployment role ARN for OIDC assumption
+- **No AWS Keys**: No long-lived access keys stored in GitHub
+
+#### GitHub Deploy Role Setup
+
+**Role Creation:**
+The deployment uses a dedicated IAM role `GitHubActionsCDKDeployRole` with OIDC Web Identity Federation.
+
+**Trust Policy:**
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {
+      "Federated": "arn:aws:iam::<ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
+    },
+    "Action": "sts:AssumeRoleWithWebIdentity",
+    "Condition": {
+      "StringEquals": {
+        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+      },
+      "StringLike": {
+        "token.actions.githubusercontent.com:sub": "repo:<GITHUB_USERNAME>/<REPOSITORY_NAME>:ref:refs/heads/main"
+      }
+    }
+  }]
+}
+```
+
+**Role Permissions:**
+The deployment role includes the following scoped permissions:
+
+1. **CloudFormation**: Stack management for `weather-sensor-poc-*` and `CDKToolkit` stacks
+2. **S3**: CDK asset storage in account-specific buckets (`cdk-*-assets-<ACCOUNT>-us-east-1`)
+3. **IAM**: Role management for Lambda functions with `weather-sensor-poc-*` and `cdk-*` prefixes
+4. **Lambda**: Function and layer operations with project prefix
+5. **EC2**: VPC, subnet, security group, and networking resource management
+6. **RDS**: Database and subnet group operations with project prefix
+7. **Secrets Manager**: Secret management with project prefix
+8. **API Gateway**: REST API management in us-east-1 region
+9. **SSM**: CDK bootstrap parameter access (`/cdk-bootstrap/*`)
+
+**Setup Commands:**
+```bash
+# Create OIDC provider (one-time setup)
+aws iam create-open-id-connect-provider \
+  --url https://token.actions.githubusercontent.com \
+  --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1
+
+# Create deployment role
+aws iam create-role \
+  --role-name GitHubActionsCDKDeployRole \
+  --assume-role-policy-document file://github-trust-policy.json
+
+# Attach deployment policy
+aws iam put-role-policy \
+  --role-name GitHubActionsCDKDeployRole \
+  --policy-name GitHubDeployPolicy \
+  --policy-document file://github-deploy-policy.json
+```
+
+### Security Best Practices Implemented
+
+#### ✅ **Implemented Security Measures**
+
+1. **Least Privilege Access**
+   - IAM roles with minimal required permissions
+   - Resource-specific ARN restrictions
+   - Time-limited OIDC tokens instead of permanent keys
+
+2. **Defense in Depth**
+   - API Gateway rate limiting
+   - Database password authentication
+   - Security group network restrictions
+   - Input validation with Pydantic schemas
+
+3. **Secrets Protection**
+   - No hardcoded credentials in code
+   - AWS Secrets Manager for database passwords
+   - OIDC federation for CI/CD authentication
+
+4. **Monitoring & Logging**
+   - CloudWatch Logs for all Lambda functions
+   - API Gateway access logging
+   - CloudFormation stack event tracking
+
+#### ⚠️ **Security Trade-offs for Cost Optimization**
+
+1. **Public RDS Access**
+   - **Risk**: Database accessible from internet
+   - **Mitigation**: Strong password authentication, security groups
+   - **Reason**: Avoids NAT Gateway costs ($32/month)
+
+2. **No API Authentication**
+   - **Risk**: Public API endpoints
+   - **Mitigation**: Rate limiting, input validation
+   - **Reason**: Demo/POC simplicity
+
+3. **Lambda Outside VPC**
+   - **Risk**: Functions not in private network
+   - **Mitigation**: IAM permissions, encrypted connections
+   - **Reason**: Avoids VPC Endpoint costs ($7/month)
+
+### Security Compliance
+
+**Industry Standards:**
+- **OWASP**: Input validation, secure credential storage
+- **AWS Well-Architected**: Security pillar best practices
+- **NIST**: Least privilege access controls
+
+**Automated Security Scanning:**
+- **SAST**: Bandit for Python security analysis
+- **Dependency Scanning**: Safety for known CVEs
+- **Secret Detection**: TruffleHog for credential leaks
+- **Code Quality**: CodeQL for security patterns
 
 ## 💰 Cost Optimization
 
