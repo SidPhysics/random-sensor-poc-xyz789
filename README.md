@@ -110,7 +110,7 @@ curl "https://dsiuqwaqe3.execute-api.us-east-1.amazonaws.com/prod/query?sensors=
    
    **Troubleshooting:**
    - If you get "cannot connect to Docker daemon" error, start Docker Desktop
-   - On Windows, Docker Desktop must be fully started (whale icon in system tray)
+   - On Windows, Docker Desktop must be fully started 
    - Alternative: Use the live API endpoints instead of local setup
 
 4. **Test the APIs**
