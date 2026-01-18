@@ -1,6 +1,6 @@
 # Weather Sensor Metrics API
 
-A production-ready REST API for ingesting and querying weather sensor metrics built with FastAPI, AWS Lambda, and PostgreSQL. This project demonstrates modern cloud-native architecture patterns while maintaining 100% AWS Free Tier compliance.
+A POC grade REST API for ingesting and querying weather sensor metrics built with FastAPI, AWS Lambda, and PostgreSQL. This project demonstrates modern cloud-native architecture patterns while maintaining 100% AWS Free Tier compliance.
 
 ## 🚀 Live Demo
 
